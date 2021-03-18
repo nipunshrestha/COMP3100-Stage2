@@ -5,47 +5,37 @@
  *
  */
 
-
-import java.io.*;  
+import java.io.*;
 import java.net.*;
 
-public class TCPTest {  
+public class TCPtest {
     public static void main(String[] args) {
         Socket s = null;
 
         try {
             // Open a port to the server
-            int serverPort = 5000;  // TODO: What is the port number?      
-            s = new Socket(args[1], serverPort);  
+            int serverPort = 50000; // TODO: What is the port number?
+            s = new Socket("localhost", serverPort);
             DataInputStream dis = new DataInputStream(s.getInputStream());
             DataOutputStream dout = new DataOutputStream(s.getOutputStream());
 
             // Setup a connection following the defined protocol
-            dout.writeUTF("HELO");
+            dout.write(("HELO\n").getBytes());
 
-            String str = (String)dis.readUTF();
+            String str = (String) dis.readLine();
+
             if (str.equals("OK"))
-                    dout.writeUTF("AUTH xxx");  // TODO: How do you get auth number?
+                dout.write(("AUTH franciscoB\n").getBytes());
 
-            if (str.equals("OK")) {
-                // TODO: Read ds-system.xml
-
-                // Begin job scheduling
-                while (true) {
-                    dout.writeUTF("REDY");
-
-                    // TODO: Job scheduling
-
-                    break;  // Remove (for testing purposes)
-
-                }
+            while (str.equals("REDY")) {
+                // Handle job
             }
-
-            s.close();  // Close the connection 
+            dout.write(("QUIT\n").getBytes());
+            s.close(); // Close the connection
         }
-        
+
         catch (Exception e) {
             System.out.println(e);
-        }  
-    }  
+        }
+    }
 }

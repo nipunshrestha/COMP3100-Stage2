@@ -5,7 +5,7 @@
  *
  */
 
-import java.io.*;  
+import java.io.*;
 import java.net.*;
 import java.io.File;
 import java.util.*;
@@ -17,25 +17,25 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Element;
 
 
-public class DSClient {  
+public class DSClient {
     public static void main(String[] args) {
         Socket s = null;
 
         try {
             // Open a port to the server
-            int serverPort = 50000;  // TODO: What is the port number?      
-            s = new Socket("localhost", serverPort);  
+            int serverPort = 50000;  // TODO: What is the port number?
+            s = new Socket("localhost", serverPort);
             BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
             DataOutputStream out = new DataOutputStream(s.getOutputStream());
-            
+
             // Setup a connection following the defined protocol
             handshake(in, out);
 
             // Read XML
-            File file = new File("../ds-simulator/src/pre-compiled/ds-system.xml");
+            File file = new File("../pre-compiled/ds-system.xml");
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
             DocumentBuilder db = dbf.newDocumentBuilder();
-            Document document = db.parse(file); 
+            Document document = db.parse(file);
             document.getDocumentElement().normalize();
 
             NodeList nList = document.getElementsByTagName("server");
@@ -44,7 +44,7 @@ public class DSClient {
             for(int i =0 ; i< nList.getLength(); i++){
                 Node nNode = nList.item(i);
                 if(nNode.getNodeType()== Node.ELEMENT_NODE){
-                    Element eElement = (Element) nNode; 
+                    Element eElement = (Element) nNode;
                     servers[i][0]=eElement.getAttribute("type");
                     servers[i][1]= eElement.getAttribute("coreCount").toString();
                 }
@@ -61,12 +61,17 @@ public class DSClient {
                     server_id = "0";
                 }
             }
-            
+
             if (((String)in.readLine()).equals("OK")) {
                 out.write(("REDY\n").getBytes());
                 String msg = "";
                 while (!msg.equals("NONE")) {
                     String job= in.readLine();
+                    String header= job.substring(0,4);
+                    if(header.equals("JCPL")){
+                        out.write(("REDY\n").getBytes());
+                        break;
+                    }
                     // Parse incomming String (Core count, RAM, Disk Space)
                     String[] job_info = job.split(" ",0);
 
@@ -82,12 +87,12 @@ public class DSClient {
             out.write(("QUIT\n").getBytes());
 
             if (((String)in.readLine()).equals("QUIT"))
-                s.close();  // Close the connection 
+                s.close();  // Close the connection
         }
-        
+
         catch (Exception e) {
             System.out.println(e);
-        }  
+        }
     }
 
     // Performs the initial handshake
@@ -99,7 +104,7 @@ public class DSClient {
             if (str.equals("OK"))
                 dout.write(("AUTH Nathan\n").getBytes());
         }
-        
+
         catch (Exception e) {
             System.out.println(e);
         }

@@ -65,11 +65,16 @@ public class DSClient {
             if (((String)in.readLine()).equals("OK")) {
                 out.write(("REDY\n").getBytes());
                 String msg = "";
+
                 while (!msg.equals("NONE")) {
+
                     String job= in.readLine();
-                    String header= job.substring(0,4);
-                    if(header.equals("JCPL")){
-                        out.write(("REDY\n").getBytes());
+
+                    while(job.substring(0,4).equals("JCPL")){
+                        out.write(("REDY\n".getBytes()));
+                        job= in.readLine();
+                    }
+                    if(job.equals("NONE")){
                         break;
                     }
                     // Parse incomming String (Core count, RAM, Disk Space)
@@ -77,11 +82,16 @@ public class DSClient {
 
                     // Create String ("SCH...") and send to DS-SERVER
                     String job_schedule = "SCHD" + " " + job_info[2] + " " + server_max + " " + server_id + "\n";
+
                     out.write(job_schedule.getBytes());
+
+
                     // Send "REDY" to get next job
                     out.write(("REDY\n".getBytes()));
                     msg= in.readLine();
+                    
                 }
+
             }
 
             out.write(("QUIT\n").getBytes());

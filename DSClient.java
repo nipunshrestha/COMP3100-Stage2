@@ -32,7 +32,7 @@ public class DSClient {
             handshake(in, out);
 
             // Read XML
-            File file = new File("../ds-simulator/src/pre-compiled/ds-system.xml");
+            File file = new File("./ds-system.xml");
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
             DocumentBuilder db = dbf.newDocumentBuilder();
             Document document = db.parse(file); 
@@ -66,16 +66,29 @@ public class DSClient {
                 out.write(("REDY\n").getBytes());
                 String msg = "";
                 while (!msg.equals("NONE")) {
+
                     String job= in.readLine();
+
+                    while(job.substring(0,4).equals("JCPL")){
+                        out.write(("REDY\n".getBytes()));
+                        job= in.readLine();
+                    }
+                    if(job.equals("NONE")){
+                        break;
+                    }
                     // Parse incomming String (Core count, RAM, Disk Space)
                     String[] job_info = job.split(" ",0);
 
                     // Create String ("SCH...") and send to DS-SERVER
                     String job_schedule = "SCHD" + " " + job_info[2] + " " + server_max + " " + server_id + "\n";
+
                     out.write(job_schedule.getBytes());
+
+
                     // Send "REDY" to get next job
                     out.write(("REDY\n".getBytes()));
                     msg= in.readLine();
+                    
                 }
             }
 
@@ -97,7 +110,7 @@ public class DSClient {
 
             String str = dis.readLine();
             if (str.equals("OK"))
-                dout.write(("AUTH Nathan\n").getBytes());
+                dout.write(("AUTH nip\n").getBytes());
         }
         
         catch (Exception e) {

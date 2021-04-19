@@ -40,16 +40,9 @@ public class DSClient {
 
             NodeList nList = document.getElementsByTagName("server");
 
-            String[][] servers = new String[nList.getLength()][2];
-            for(int i =0 ; i< nList.getLength(); i++){
-                Node nNode = nList.item(i);
-                if(nNode.getNodeType()== Node.ELEMENT_NODE){
-                    Element eElement = (Element) nNode;
-                    servers[i][0]=eElement.getAttribute("type");
-                    servers[i][1]= eElement.getAttribute("coreCount").toString();
-                }
-            }
+            String[][] servers = getServerList(nList);
 
+            // Finding the largest Server
             int max_core_count = Integer.MIN_VALUE;
             String server_max = "";
             String server_id = "";
@@ -126,5 +119,19 @@ public class DSClient {
         catch (Exception e) {
             System.out.println(e);
         }
+    }
+    public static String[][] getServerList(NodeList nList){
+        String[][] xml = new String[nList.getLength()][2];
+            for(int i =0 ; i< nList.getLength(); i++){
+                Node nNode = nList.item(i);
+                if(nNode.getNodeType()== Node.ELEMENT_NODE){
+                    Element eElement = (Element) nNode; 
+                    xml[i][0]=eElement.getAttribute("type");
+                    xml[i][1]= eElement.getAttribute("coreCount").toString();
+                }
+            }
+
+
+        return xml;
     }
 }

@@ -22,8 +22,8 @@ public class DSClient {
         Socket s = null;
 
         try {
-            // Open a port to the server
-            int serverPort = 50000;  // TODO: What is the port number?
+            // Open a port to the server and input/output streams
+            int serverPort = 50000;
             s = new Socket("localhost", serverPort);
             BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
             DataOutputStream out = new DataOutputStream(s.getOutputStream());
@@ -31,73 +31,52 @@ public class DSClient {
             // Setup a connection following the defined protocol
             handshake(in, out);
 
-            // Read XML
-            File file = new File("./ds-system.xml");
-            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-            DocumentBuilder db = dbf.newDocumentBuilder();
-            Document document = db.parse(file);
-            document.getDocumentElement().normalize();
-
-            NodeList nList = document.getElementsByTagName("server");
-
-            String[][] servers = getServerList(nList);
-
-            // Finding the largest Server
-            int max_core_count = Integer.MIN_VALUE;
-            String server_max = "";
-            String server_id = "";
-
-            for(int i = 0; i< servers.length; i++){
-                if(Integer.parseInt(servers[i][1])> max_core_count){
-                    max_core_count = Integer.parseInt(servers[i][1]);
-                    server_max = servers[i][0];
-                    server_id = "0";
-                }
-            }
-
             if (((String)in.readLine()).equals("OK")) {
-                out.write(("REDY\n").getBytes());
-                String msg = "";
+                Document doc = readFile("./ds-system.xml"); // Read ds-system.xml
+
+                // Get a list of servers and thier coreCounts
+                NodeList nList = doc.getElementsByTagName("server");   // Create a list of the server names
+                String[][] servers = getServerList(nList);
+
+                // Get the largest server
+                int max_core_count = Integer.MIN_VALUE;
+                String server_max = "";
+                String server_id = "";
+                for(int i = 0; i< servers.length; i++) {
+                    if (Integer.parseInt(servers[i][1]) > max_core_count) {
+                        max_core_count = Integer.parseInt(servers[i][1]);
+                        server_max = servers[i][0];
+                        server_id = "0";
+                    }
+                }
+
+                // Preform scheduling
+                String msg = " ";
                 while (!msg.equals("NONE")) {
-                    System.out.println("Stuck before readline");
-                    String job= in.readLine();
-                    System.out.println("Stuck before jobLength");
-                    if(job.length()>4)
-                    System.out.println("Stuck before jobSubstring");
-                    while(job.substring(0,4).equals("JCPL")){
-                        System.out.println("Stuck before REDY in JCPL loop");
-                        out.write(("REDY\n".getBytes()));
-                        System.out.println("Stuck before Readline in JCPL loop");
-                        job= in.readLine();
-                    }
-                    System.out.println("Stuck before job.equals NONE in main loop");
-                    if(job.equals("NONE")){
-                        break;
-                    }
-                    // Parse incomming String (Core count, RAM, Disk Space)
-                    System.out.println("Stuck before JobSplit");
+                    out.write(("REDY\n").getBytes());   // Ready for next job
+
+                    // Get the job
+                    String job = in.readLine();
                     String[] job_info = job.split(" ",0);
 
-                    // Create String ("SCH...") and send to DS-SERVER
-                    System.out.println("Stuck before JobSchedule");
+                    while (job_info[0].equals("JCPL")) {    // Disregard JCPL commands
+                        out.write(("REDY\n".getBytes()));
+                        job = in.readLine();
+                        job_info = job.split(" ",0);
+                    }
+
+                    if (job.equals("NONE")) {
+                        break;
+                    }
+
+                    // Prepare and send schedule command
                     String job_schedule = "SCHD" + " " + job_info[2] + " " + server_max + " " + server_id + "\n";
-                    System.out.println("Stuck before Writing job SCHD");
                     out.write(job_schedule.getBytes());
-
-
-                    // Send "REDY" to get next job
-                    System.out.println("Stuck before REDY in main loop");
-                    out.write(("REDY\n".getBytes()));
-                    System.out.println("Stuck before readline in main loop");
-                    msg= in.readLine();
-
+                    msg = in.readLine();
                 }
             }
 
-            out.write(("QUIT\n").getBytes());
-
-            if (((String)in.readLine()).equals("QUIT"))
-                s.close();  // Close the connection
+            disconnect(s, in, out);
         }
 
         catch (Exception e) {
@@ -105,21 +84,54 @@ public class DSClient {
         }
     }
 
-    // Performs the initial handshake
-    public static void handshake(BufferedReader dis, DataOutputStream dout) {
+    /* Performs the initial handshake
+     *
+     * din: An input stream to read from
+     * dout: An output stream to write to
+     */
+    public static void handshake(BufferedReader din, DataOutputStream dout) {
         String user = System.getProperty("user.name");
         try {
             dout.write(("HELO\n").getBytes());
 
-            String str = dis.readLine();
+            String str = din.readLine();
             if (str.equals("OK"))
-                dout.write(("AUTH "+user+"\n").getBytes());
+                dout.write(("AUTH " + user + "\n").getBytes());
         }
 
         catch (Exception e) {
             System.out.println(e);
         }
     }
+
+    /* Reads the specified file and creates a document
+     *
+     * path: A file path for the file to be read
+     *
+     * returns: A document object of the file
+     */
+    public static Document readFile(String path) {
+        try {
+            File file = new File(path);
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document document = db.parse(file);
+            document.getDocumentElement().normalize();
+            return document;
+        }
+
+        catch (Exception e) {
+            System.out.println(e);
+            return null;
+        }
+    }
+
+    /* Gets a list of servers names and thier coreCount
+     *
+     * nList: A NodeList to get data from
+     *
+     * returns: An array of server name, coreCount pairs.
+     */
     public static String[][] getServerList(NodeList nList){
         String[][] xml = new String[nList.getLength()][2];
             for(int i =0 ; i< nList.getLength(); i++){
@@ -133,5 +145,24 @@ public class DSClient {
 
 
         return xml;
+    }
+
+    /* Disconnect from the socket
+     *
+     * socket: A socket to disconnect from
+     * din: An input stream to read from
+     * dout: An output stream to write to
+     */
+    public static void disconnect(Socket socket, BufferedReader din, DataOutputStream dout) {
+        try {
+            dout.write(("QUIT\n").getBytes());
+
+            if (((String)din.readLine()).equals("QUIT"))
+                socket.close();  // Close the connection
+        }
+
+        catch (Exception e) {
+            System.out.println(e);
+        }
     }
 }
